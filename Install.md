@@ -1,4 +1,8 @@
 pip install git+https://github.com/nlhepler/pydot.git
 
-conda install tensorflow-gpu keras graphviz pillow opencv scikit-image matplotlib
+pip install git+https://github.com/NVIDIA/keras.git
+pip install mxnet-cu80mkl
 
+conda install graphviz pillow opencv scikit-image matplotlib
+
+conda install -c menpo vtk
