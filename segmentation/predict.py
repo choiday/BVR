@@ -111,8 +111,8 @@ best_last = config.get('testing settings', 'best_last')
 model = model_from_json(open(path_experiment+name_experiment +'_architecture.json').read())
 model.load_weights(path_experiment+name_experiment + '_'+best_last+'_weights.h5')
 
-#model.compile(optimizer='sgd', loss='categorical_crossentropy',metrics=['accuracy'], context=['gpu(0)','gpu(1)','gpu(2)'])
-model.compile(optimizer='sgd', loss='categorical_crossentropy',metrics=['accuracy'], context=['gpu(0)'])
+model.compile(optimizer='sgd', loss='categorical_crossentropy',metrics=['accuracy'], context=['gpu(0)','gpu(1)','gpu(2)'])
+#model.compile(optimizer='sgd', loss='categorical_crossentropy',metrics=['accuracy'], context=['gpu(0)'])
 
 #Calculate the predictions
 predictions = model.predict(patches_imgs_test, batch_size=32, verbose=2)
@@ -158,7 +158,8 @@ for i in range(int(N_predicted/group)):
     masks_stripe = group_images(gtruth_masks[i*group:(i*group)+group,:,:,:],group)
     pred_stripe = group_images(pred_imgs[i*group:(i*group)+group,:,:,:],group)
     total_img = np.concatenate((orig_stripe,masks_stripe,pred_stripe),axis=0)
-    visualize(total_img,path_experiment+name_experiment +"_Original_GroundTruth_Prediction"+str(i))#.show()
+    #visualize(total_img,path_experiment+name_experiment +"_Original_GroundTruth_Prediction"+str(i))#.show()
+    visualize(pred_stripe,path_experiment+name_experiment +"_Prediction"+str(i))#.show()
 
 
 #====== Evaluate the results

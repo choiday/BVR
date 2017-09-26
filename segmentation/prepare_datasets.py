@@ -36,7 +36,7 @@ def threshold_minimum(image, nbins=256, max_iter=10000):
     for counter in range(max_iter):
         smooth_hist = ndi.uniform_filter1d(smooth_hist, 3)
         maximum_idxs = find_local_maxima_idx(smooth_hist)
-        if len(maximum_idxs) < 4:
+        if len(maximum_idxs) < 5:
             break
 
     # Find lowest point between the maxima
@@ -50,11 +50,11 @@ def write_hdf5(arr,outfile):
 #------------Path of the images --------------------------------------------------------------
 #train
 original_imgs_train = "./resource/IMGC/training/images/"
-groundTruth_imgs_train = "./resource/IMGC/training/ground_truth/"
+groundTruth_imgs_train = "./resource/IMGC/training/labels/"
 
 #test
 original_imgs_test = "./resource/IMGC/test/images/"
-groundTruth_imgs_test = "./resource/IMGC/test/ground_truth/"
+groundTruth_imgs_test = "./resource/IMGC/test/labels/"
 #---------------------------------------------------------------------------------------------
 
 Nimgs = 20
@@ -62,7 +62,7 @@ height = 512
 width = 512
 dataset_path = "./IMGC_datasets_training_testing/"
 
-def get_datasets(imgs_dir):
+def get_datasets(imgs_dir, groundTruth_dir):
     imgs = np.empty((Nimgs,height,width))
     groundTruth = np.empty((Nimgs,height,width))
     border_masks = np.empty((Nimgs,height,width))
@@ -74,9 +74,14 @@ def get_datasets(imgs_dir):
             imgs[i] = np.asarray(img)
 
             #corresponding ground truth
-            groundTruth_name = files[i][0:2] + "_gt.gif"
+            groundTruth_name = files[i]
             g_truth = Image.open(groundTruth_dir + groundTruth_name)
             groundTruth[i] = np.asarray(g_truth)
+
+            for j in range(groundTruth.shape[1]):
+                for k in range(groundTruth.shape[2]):
+                    if groundTruth[i][j][k] > 1:
+                        groundTruth[i][j][k] = 1
 
             #corresponding border masks
             image = imread(imgs_dir+files[i])
@@ -87,6 +92,9 @@ def get_datasets(imgs_dir):
 
     print ("imgs max: " +str(np.max(imgs)))
     print ("imgs min: " +str(np.min(imgs)))
+
+    print ("groundTruth max: " +str(np.max(groundTruth)))
+    print ("groundTruth min: " +str(np.min(groundTruth)))
 
     #reshaping for my standard tensors
     #imgs = np.transpose(imgs,(0,1,2))

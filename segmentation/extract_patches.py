@@ -25,13 +25,15 @@ def get_data_training(IMGC_train_imgs_original,
 
 
     train_imgs = my_PreProc(train_imgs_original)
-    train_masks = train_masks/255.
+    #train_masks = train_masks/255.
 
-    train_imgs = train_imgs[:,:,9:574,:]  #cut bottom and top so now it is 565*565
-    train_masks = train_masks[:,:,9:574,:]  #cut bottom and top so now it is 565*565
+    #train_imgs = train_imgs[:,:,9:574,:]  #cut bottom and top so now it is 565*565
+    #train_masks = train_masks[:,:,9:574,:]  #cut bottom and top so now it is 565*565
     data_consistency_check(train_imgs,train_masks)
 
     #check masks are within 0-1
+    t1 = np.min(train_masks)
+    t2 = np.max(train_masks)
     assert(np.min(train_masks)==0 and np.max(train_masks)==1)
 
     print ("\ntrain images/masks shape:")
@@ -57,7 +59,7 @@ def get_data_testing(IMGC_test_imgs_original, IMGC_test_groudTruth, Imgs_to_test
     test_masks = load_hdf5(IMGC_test_groudTruth)
 
     test_imgs = my_PreProc(test_imgs_original)
-    test_masks = test_masks/255.
+    #test_masks = test_masks/255.
 
     #extend both images and masks so they can be divided exactly by the patches dimensions
     test_imgs = test_imgs[0:Imgs_to_test,:,:,:]
@@ -97,13 +99,16 @@ def get_data_testing_overlap(IMGC_test_imgs_original, IMGC_test_groudTruth, Imgs
     test_masks = load_hdf5(IMGC_test_groudTruth)
 
     test_imgs = my_PreProc(test_imgs_original)
-    test_masks = test_masks/255.
+    #test_masks = test_masks/255.
     #extend both images and masks so they can be divided exactly by the patches dimensions
     test_imgs = test_imgs[0:Imgs_to_test,:,:,:]
     test_masks = test_masks[0:Imgs_to_test,:,:,:]
+    
     test_imgs = paint_border_overlap(test_imgs, patch_height, patch_width, stride_height, stride_width)
 
     #check masks are within 0-1
+    t1 = np.min(test_masks)
+    t2 = np.max(test_masks)
     assert(np.max(test_masks)==1  and np.min(test_masks)==0)
 
     print ("\ntest images shape:")
