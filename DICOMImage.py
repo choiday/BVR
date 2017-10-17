@@ -2,7 +2,7 @@ import SimpleITK as sitk
 import numpy as np
 
 def getBestImage(images):
-    return images[48]
+    return images[40]
 
 def readDICOMImage(filename):
     reader=sitk.ImageFileReader()

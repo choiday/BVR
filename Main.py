@@ -6,6 +6,4 @@ import cv2
 filepath1='/home/rtv/workspace/BVR/resource/Data/P2PGS/DCM/I0000004'
 filepath2='/home/rtv/workspace/BVR/resource/Data/P2PGS/DCM/I0000005'
 
-coef_img = projected_epipolar_line([100,100], filepath1, filepath2)
-
 render(filepath1, filepath2)
