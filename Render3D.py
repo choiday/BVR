@@ -1,26 +1,28 @@
 import vtk
 import numpy as np
 from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray  
-from ProjectionMatrix import projected_epipolar_line
-from DICOMImage import readDICOMImage
+from ProjectionMatrix import *
+from DICOMImage import DicomData
 import cv2
 
 def createQuad(imageData):
-    p0 = [0.0, 0.0, 0.0]
-    p1 = [1.0, 0.0, 0.0]
-    p2 = [1.0, 1.0, 0.0]
-    p3 = [0.0, 1.0, 0.0]
+    p0 = [-0.5, -0.5, 0.0]
+    p1 = [0.5, -0.5, 0.0]
+    p2 = [0.5, 0.5, 0.0]
+    p3 = [-0.5, 0.5, 0.0]
     points = vtk.vtkPoints()
     points.InsertNextPoint(p0)
     points.InsertNextPoint(p1)
     points.InsertNextPoint(p2)
     points.InsertNextPoint(p3)
+
     quad = vtk.vtkQuad()
     quad.GetPointIds().SetNumberOfIds(4)
     quad.GetPointIds().SetId(0,0)
     quad.GetPointIds().SetId(1,1)
     quad.GetPointIds().SetId(2,2)
     quad.GetPointIds().SetId(3,3)
+
     quads = vtk.vtkCellArray()
     quads.InsertNextCell(quad)
 
@@ -67,47 +69,91 @@ def render(file1, file2):
     ren.SetBackground(.1, .2, .5)
     renWin = vtk.vtkRenderWindow()
     renWin.AddRenderer(ren)
-    renWin.SetSize(480,480)
+    renWin.SetSize(1024,1024)
     iren = vtk.vtkRenderWindowInteractor()
     iren.SetRenderWindow(renWin)
 
-    scale = 300
+    scale = 512
 
-    point=[100,100]
+    point=[256,256]
 
-    img1, metadata1 = readDICOMImage(file1)
-    img2, metadata2 = readDICOMImage(file2)
+    Data1=DicomData(file1)
+    Data2=DicomData(file2)
+    Data1.compute_initial_transform_matrix()
+    Data2.compute_initial_transform_matrix()
+    img1=Data1.img.copy()
+    img2=Data2.img.copy()
 
-    coef_img = projected_epipolar_line(point, file1, file2)
+    coef_img = projected_epipolar_line(point, Data1, Data2)
 
-    cv2.circle(img1,(point[0],point[1]),5,(0,0,255),-1)
+    cv2.circle(img1,(point[0],point[1]),10,(255,0,0),-1)
     cv2.line(img2,(0,-coef_img[2]/coef_img[1]),(511,-(511*coef_img[0]+coef_img[2])/coef_img[1]),(255,0,0),5)
 
+    cv2.putText(img1,str(int(np.rad2deg(Data1.PA)))+', '+str(int(np.rad2deg(Data1.SA))),(10, 100),1,4,(255,255,255),2,cv2.LINE_AA)
+    cv2.putText(img2,str(int(np.rad2deg(Data2.PA)))+', '+str(int(np.rad2deg(Data2.SA))),(10, 100),1,4,(255,255,255),2,cv2.LINE_AA)
+
+    # [coef1_global, coef2_global]=global_line_from_image_point(point,Data1)
+    coef_img=projected_epipolar_line(point,Data1,Data2)
+
+    img1_position=pt3d_from_pt2d([0,0],Data1)
+    img2_position=pt3d_from_pt2d([0,0],Data2)
+    source1_position=np.matmul(Data1.rot[0:3][:],Data1.tls[0:3]+np.array([[0.0, 0.0,-Data1.SOD]]).T)
+    source2_position=np.matmul(Data2.rot[0:3][:],Data2.tls[0:3]+np.array([[0.0, 0.0,-Data2.SOD]]).T)
+    target_position=pt3d_from_pt2d(point,Data1)
+    epi_point1=[0,-coef_img[2]/coef_img[1]]
+    epi_point2=[511,-(511*coef_img[0]+coef_img[2])/coef_img[1]]
+    epi_position1=pt3d_from_pt2d(epi_point1,Data2)
+    epi_position2=pt3d_from_pt2d(epi_point2,Data2)
+        
     # draw 3d lines
     pts = vtk.vtkPoints()
-    pts.InsertNextPoint([0.0, 0.0, 0.0])
-    pts.InsertNextPoint([1000.0, 0.0, 0.0])
-    pts.InsertNextPoint([0.0, 1000.0, 0.0])
+    # pts.InsertNextPoint([0.0, 0.0, 0.0])
+    # pts.InsertNextPoint([1000.0, 0.0, 0.0])
+    # pts.InsertNextPoint([0.0, 1000.0, 0.0])
+    pts.InsertNextPoint(img1_position)
+    pts.InsertNextPoint(source1_position)
+    pts.InsertNextPoint(img2_position)
+    pts.InsertNextPoint(source2_position)
+    pts.InsertNextPoint(target_position)
+    pts.InsertNextPoint(epi_position1)
+    pts.InsertNextPoint(epi_position2)    
+    
 
     red = [255, 0, 0]
     green = [0, 255, 0]
+    white = [255, 255, 255]
 
     colors = vtk.vtkUnsignedCharArray()
     colors.SetNumberOfComponents(3)
     colors.SetName("Colors")
     colors.InsertNextTuple(red)
     colors.InsertNextTuple(green)
+    colors.InsertNextTuple(white)
+    colors.InsertNextTuple(white)
+    colors.InsertNextTuple(white)
 
     line0 = vtk.vtkLine()
     line0.GetPointIds().SetId(0,0) # the second 0 is the index of the Origin in the vtkPoints
     line0.GetPointIds().SetId(1,1) # the second 1 is the index of P0 in the vtkPoints
     line1 = vtk.vtkLine()
-    line1.GetPointIds().SetId(0,0) # the second 0 is the index of the Origin in the vtkPoints
-    line1.GetPointIds().SetId(1,2) # 2 is the index of P1 in the vtkPoints
+    line1.GetPointIds().SetId(0,2) # the second 0 is the index of the Origin in the vtkPoints
+    line1.GetPointIds().SetId(1,3) # 2 is the index of P1 in the vtkPoints
+    line2 = vtk.vtkLine()
+    line2.GetPointIds().SetId(0,1) 
+    line2.GetPointIds().SetId(1,4) 
+    line3 = vtk.vtkLine()
+    line3.GetPointIds().SetId(0,3) 
+    line3.GetPointIds().SetId(1,5) 
+    line4 = vtk.vtkLine()
+    line4.GetPointIds().SetId(0,3) 
+    line4.GetPointIds().SetId(1,6) 
     
     lines = vtk.vtkCellArray()
     lines.InsertNextCell(line0)
     lines.InsertNextCell(line1)
+    lines.InsertNextCell(line2)
+    lines.InsertNextCell(line3)
+    lines.InsertNextCell(line4)
 
     linesPolyData = vtk.vtkPolyData()
     linesPolyData.SetPoints(pts)
@@ -125,19 +171,20 @@ def render(file1, file2):
 
     transform1 = vtk.vtkTransform()
     
-    RAO = np.rad2deg(metadata1['PA'])
-    CRAU = np.rad2deg(metadata1['SA'])
-    transform1.RotateY(-RAO)
+    LAO = np.rad2deg(Data1.PA)
+    CRAU = np.rad2deg(Data1.SA)
+    transform1.Translate(img1_position)
+    transform1.RotateY(-LAO)
     transform1.RotateX(CRAU)
-    transform1.Translate(0, 0, metadata1['SID'] - metadata1['SOD'])
     transform1.Scale(scale,scale,scale)
 
     transform2 = vtk.vtkTransform()
-    RAO = np.rad2deg(metadata2['PA'])
-    CRAU = np.rad2deg(metadata2['SA'])
-    transform2.RotateY(-RAO)
+    LAO = np.rad2deg(Data2.PA)
+    CRAU = np.rad2deg(Data2.SA)
+    transform2.Translate(img2_position)
+    transform2.RotateY(-LAO)
     transform2.RotateX(CRAU)
-    transform2.Translate(0, 0, metadata2['SID'] - metadata2['SOD'])
+    # transform2.Translate(Data2.tls[0], Data2.tls[1], Data2.tls[3] + Data2.SID - Data2.SOD)
     transform2.Scale(scale,scale,scale)
 
     actor1 = createQuad(img1)
