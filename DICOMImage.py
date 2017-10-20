@@ -30,18 +30,23 @@ class DicomData():
             self.PS=np.array(dicomImage.GetMetaData('0018|1164').split('\\')).astype(float)
             self.images = sitk.GetArrayFromImage(dicomImage)
             self.img = getBestImage(self.images)
+            self.tls=np.array([[0.0],[0.0],[0.0],[1.0]])
+            self.skew=0
             
     
     def info(self):
         print('Dicom file '+str(self.order)+' : angles ('+str(self.PA)+', '+str(self.SA)+' has '+len(self.images)+' images')
 
     def compute_initial_transform_matrix(self):
-        self.skew=0
-        self.tls=np.array([[0.0],[0.0],[0.0],[1.0]])
-
         self.roty=np.array([[np.cos(self.PA),0.0,-np.sin(self.PA)],[0.0,1.0,0.0],[np.sin(self.PA),0.0,np.cos(self.PA)]])
         self.rotx=np.array([[1.0,0.0,0.0],[0.0,np.cos(self.SA),-np.sin(self.SA)],[0.0,np.sin(self.SA),np.cos(self.SA)]])
-
+        
+        # if dicomImage.GetMetaData('0020|0013')=='2 ':
+            
+        # else:
+        #     self.roty=np.array([[np.cos(self.PA),0.0,-np.sin(self.PA)],[0.0,1.0,0.0],[np.sin(self.PA),0.0,np.cos(self.PA)]])
+        #     self.rotx=np.array([[1.0,0.0,0.0],[0.0,np.cos(self.SA),-np.sin(self.SA)],[0.0,np.sin(self.SA),np.cos(self.SA)]])
+        
         self.rot=np.matmul(self.rotx,self.roty)
         self.rot=np.vstack((self.rot,[0.0,0.0,0.0]))
 
