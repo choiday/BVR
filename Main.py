@@ -10,7 +10,8 @@ filepath2='/home/rtv/workspace/BVR/resource/Data/P2PGS/DCM/I0000004'
 # extract center lines
 
 # reconstruction
-render(filepath1, filepath2)
+target_point = [120, 112]
+render(filepath1, filepath2, target_point)
 
 # visualize 3d object
 
