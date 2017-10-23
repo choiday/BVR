@@ -104,18 +104,71 @@ def epigeometry_points(pts, point, Data1, Data2):
 
     return img1_position, img2_position, epi_point1, epi_point2 
 
+class CustomInteractor(vtk.vtkInteractorStyleTrackballCamera):
+    
+    def __init__(self, renderer, renWin):
+        self.AddObserver('LeftButtonPressEvent', self.OnLeftButtonDown)
+        self.AddObserver('LeftButtonReleaseEvent', self.OnLeftButtonRelease)
+        self.AddObserver('MouseMoveEvent', self.OnMouseMove)
+
+        self.renderer = renderer
+        self.chosenPiece = None
+        self.renWin = renWin
+
+    def OnLeftButtonRelease(self, obj, eventType):
+        self.chosenPiece = None
+        vtk.vtkInteractorStyleTrackballCamera.OnLeftButtonUp(self)
+
+    def OnLeftButtonDown(self, obj, eventType):
+        clickPos = self.GetInteractor().GetEventPosition()
+
+        picker = vtk.vtkPropPicker()
+        picker.Pick(clickPos[0], clickPos[1], 0, self.renderer)
+        actor = picker.GetActor2D()
+
+        self.chosenPiece = actor
+
+        vtk.vtkInteractorStyleTrackballCamera.OnLeftButtonDown(self)
+
+    def OnMouseMove(self, obj, eventType):
+        if self.chosenPiece is not None:
+
+            mousePos = self.GetInteractor().GetEventPosition()
+
+            self.chosenPiece.SetPosition(mousePos[0], mousePos[1])
+
+            self.renWin.Render()
+        else :
+            vtk.vtkInteractorStyleTrackballCamera.OnMouseMove(self)
+
+def ImageActor(img):
+    reader = vtkImageImportFromArray()
+    reader.SetArray(img)
+
+    textureCoordinates = vtk.vtkFloatArray()
+    textureCoordinates.SetNumberOfComponents(2)
+    textureCoordinates.InsertNextTuple2(0.0, 1.0)
+    textureCoordinates.InsertNextTuple2(1.0, 1.0)
+    textureCoordinates.InsertNextTuple2(1.0, 0.0)
+    textureCoordinates.InsertNextTuple2(0.0, 0.0)
+
+    texture = vtk.vtkTexture()
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        texture.SetInput(reader.GetOutput())
+    else:
+        texture.SetInputConnection(reader.GetOutputPort())
+    
+    mapper=vtk.vtkImageMapper()
+    mapper.SetInputConnection(reader.GetOutputPort())
+    actor=vtk.vtkImageActor()
+    # actor.SetMapper(mapper)
+    actor.SetInputData(reader.GetOutput())
+    
+    return actor
 
 
 def render(file1, file2, point):
-    # Create a render window
-    ren = vtk.vtkRenderer()
-    ren.SetBackground(.1, .2, .5)
-    renWin = vtk.vtkRenderWindow()
-    renWin.AddRenderer(ren)
-    renWin.SetSize(1024,1024)
-    iren = vtk.vtkRenderWindowInteractor()
-    iren.SetRenderWindow(renWin)
-
+    
     Data1=DicomData(file1)
     Data2=DicomData(file2)
     Data1.compute_initial_transform_matrix()
@@ -123,6 +176,21 @@ def render(file1, file2, point):
 
     img1=Data1.img.copy()
     img2=Data2.img.copy()
+
+    # Create a render window
+    ren = vtk.vtkRenderer()
+    ren.SetBackground(.1, .2, .5)
+    ren2dimg1 = vtk.vtkRenderer()
+    # ren2dimg1.SetBackground(.1, .2, .5)
+    ren2dimg2= vtk.vtkRenderer()
+    # ren2dimg2.SetBackground(.1, .2, .5)
+    renWin = vtk.vtkRenderWindow()
+    renWin.AddRenderer(ren)
+    renWin.AddRenderer(ren2dimg1)
+    renWin.AddRenderer(ren2dimg2)
+    renWin.SetSize(1536,1024)
+    iren = vtk.vtkRenderWindowInteractor()
+    iren.SetRenderWindow(renWin)
 
     pts = vtk.vtkPoints()
 
@@ -158,7 +226,6 @@ def render(file1, file2, point):
         mapper.SetInputData(linesPolyData)    
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
-    ren.AddActor(actor)
 
     transform1 = vtk.vtkTransform()
     transform1.Translate(img1_position)
@@ -173,20 +240,42 @@ def render(file1, file2, point):
     # transform2.RotateX(-CRAU)
     transform2.Scale(img2.shape[0]*Data2.PS[0],img2.shape[1]*Data2.PS[1],1)
 
-    actor1 = createQuad(img1)
-    actor1.SetUserTransform(transform1)
+    planeA_actor = createQuad(img1)
+    planeA_actor.SetUserTransform(transform1)
 
-    actor2 = createQuad(img2)
-    actor2.SetUserTransform(transform2)
+    planeB_actor = createQuad(img2)
+    planeB_actor.SetUserTransform(transform2)
 
     axes = vtk.vtkAxesActor()
     transform = vtk.vtkTransform()
     transform.Scale(100, 100, 100)
     axes.SetUserTransform(transform)
+    
+    textProperty = vtk.vtkTextProperty()
+    textProperty.SetFontSize(25)
+    textProperty.SetJustificationToCentered()
 
-    ren.AddActor(actor1)
-    ren.AddActor(actor2)
+    textMapper=vtk.vtkTextMapper()
+    textActor=vtk.vtkActor2D()
+    textMapper.SetInput('Epipolar Geometry')
+    textMapper.SetTextProperty(textProperty)
+    textActor.SetMapper(textMapper)
+    textActor.SetPosition(512,950)
+
+    ren.AddActor(actor)
+    ren.AddActor(planeA_actor)
+    ren.AddActor(planeB_actor)
     ren.AddActor(axes)
+    ren.AddViewProp(textActor)
+    ren.SetViewport([0.0, 0.0, 2/3, 1.0])
+
+    img2dactor1=ImageActor(img1)
+    ren2dimg1.AddActor(img2dactor1)
+    ren2dimg1.SetViewport([2/3,0.5,1.0,1.0])
+    
+    img2dactor2=ImageActor(img2)
+    ren2dimg2.AddActor(img2dactor2)
+    ren2dimg2.SetViewport([2/3,0.0,1.0,0.5])
 
     iren.Initialize()
     renWin.Render()
