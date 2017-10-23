@@ -15,8 +15,8 @@ name = test
 
 [data attributes]
 #Dimensions of the patches extracted from the full images
-patch_height = 48
-patch_width = 48
+patch_height = 72
+patch_width = 72
 
 
 [training settings]

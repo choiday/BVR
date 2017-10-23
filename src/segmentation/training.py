@@ -68,8 +68,8 @@ def get_unet(n_ch,patch_height,patch_width):
     model = Model(input=inputs, output=conv7)
 
     # sgd = SGD(lr=0.01, decay=1e-6, momentum=0.3, nesterov=False)
-    model.compile(optimizer='sgd', loss='categorical_crossentropy',metrics=['accuracy'], context=['gpu(0)','gpu(1)','gpu(2)'])
-    #model.compile(optimizer='sgd', loss='categorical_crossentropy',metrics=['accuracy'], context=['gpu(0)'])
+    #model.compile(optimizer='sgd', loss='categorical_crossentropy',metrics=['accuracy'], context=['gpu(0)','gpu(1)','gpu(2)'])
+    model.compile(optimizer='sgd', loss='categorical_crossentropy',metrics=['accuracy'], context=['gpu(0)'])
 
     return model
 
