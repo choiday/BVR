@@ -15,7 +15,7 @@ while len(Files) is not 2:
 from tkinter.filedialog import askdirectory
 import glob
 # dcmdir=askdirectory(initialdir='/home/rtv/workspace/BVR/resource/Data/')
-dcmdir='/home/rtv/workspace/BVR/resource/Data/P2PGS/DCM/'
+dcmdir='/home/rtv/workspace/BVR/resource/Data/P5YNJ/DCM/'
 dcms=sorted(glob.glob(dcmdir+"/I00*"))
 while len(dcms) is 0:
 	messagebox.showerror(title='error',message='no DICOM FILE')
@@ -36,8 +36,8 @@ reader=sitk.ImageFileReader()
 #Metacode='0020|0030' #Image Position
 # Metacode='0020|0013' #image type
 # Metacode='0020|0012' #Acquisition Number
-# Metacode='0008|0031' # Series time
-Metacode='0008|0018' # UID
+Metacode='0008|0031' # Series time
+# Metacode='0008|0018' # UID
 #
 for i in range(len(dcms)):
 	#ds=dicom.read_file(dcms[0])

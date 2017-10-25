@@ -2,15 +2,16 @@ import vtk
 import numpy as np
 from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray  
 from ProjectionMatrix import *
-from DICOMImage import DicomData
 import cv2
 import tkinter as tk
 
 def createQuad(imageData):
-    p0 = [-0.5, 0.5, 0.0]
-    p1 = [0.5, 0.5, 0.0]
-    p2 = [0.5, -0.5, 0.0]
-    p3 = [-0.5, -0.5, 0.0]
+    w=imageData.shape[0]
+    h=imageData.shape[1]
+    p0 = [-w/2, h/2, 0.0]
+    p1 = [w/2, h/2, 0.0]
+    p2 = [w/2, -h/2, 0.0]
+    p3 = [-w/2, -h/2, 0.0]
     
     points = vtk.vtkPoints()
     points.InsertNextPoint(p0)
@@ -39,12 +40,13 @@ def createQuad(imageData):
     textureCoordinates.InsertNextTuple2(1.0, 1.0)
     textureCoordinates.InsertNextTuple2(0.0, 1.0)
     polydata.GetPointData().SetTCoords(textureCoordinates)
-
-    # Read the image data from a file
+    
     reader = vtkImageImportFromArray()
     reader.SetArray(imageData)
-    # reader = vtk.vtkPNGReader()
-    # reader.SetFileName(imagefile)
+
+    # fliper=vtk.vtkImageFlip()
+    # fliper.SetFilteredAxis(1)
+    # fliper.SetInputConnection(reader.GetOutputPort())
 
     # Create texture object
     texture = vtk.vtkTexture()
@@ -59,6 +61,9 @@ def createQuad(imageData):
     else:
         mapper.SetInputData(polydata)
 
+    # actor=vtk.vtkImageActor()
+    # actor.GetMapper().SetInputConnection(fliper1.GetOutputPort())
+    # actor.SetScale([0.001, 0.001, 0.001])
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
     actor.SetTexture(texture)
@@ -145,61 +150,65 @@ def ImageActor(img):
     reader = vtkImageImportFromArray()
     reader.SetArray(img)
 
-    textureCoordinates = vtk.vtkFloatArray()
-    textureCoordinates.SetNumberOfComponents(2)
-    textureCoordinates.InsertNextTuple2(0.0, 1.0)
-    textureCoordinates.InsertNextTuple2(1.0, 1.0)
-    textureCoordinates.InsertNextTuple2(1.0, 0.0)
-    textureCoordinates.InsertNextTuple2(0.0, 0.0)
-
-    texture = vtk.vtkTexture()
-    if vtk.VTK_MAJOR_VERSION <= 5:
-        texture.SetInput(reader.GetOutput())
-    else:
-        texture.SetInputConnection(reader.GetOutputPort())
+    ImageDataGeometryFilter=vtk.vtkImageDataGeometryFilter()
+    ImageDataGeometryFilter.SetInputConnection(reader.GetOutputPort())
+    ImageDataGeometryFilter.Update()
     
+    # textureCoordinates = vtk.vtkFloatArray()
+    # textureCoordinates.SetNumberOfComponents(2)
+    # textureCoordinates.InsertNextTuple2(0.0, 1.0)
+    # textureCoordinates.InsertNextTuple2(1.0, 1.0)
+    # textureCoordinates.InsertNextTuple2(1.0, 0.0)
+    # textureCoordinates.InsertNextTuple2(0.0, 0.0)
+
+    mag=vtk.vtkImageMagnify()
+    mag.SetMagnificationFactors(512,512,1)
+    mag.InterpolateOff()
+    mag.SetInputConnection(reader.GetOutputPort())
+
     mapper=vtk.vtkImageMapper()
-    mapper.SetInputConnection(reader.GetOutputPort())
-    actor=vtk.vtkImageActor()
+    # mapper.SetInputConnection(reader.GetOutputPort())
+    # mapper.SetColorWindow(4)
+    # mapper.SetColorLevel(255)
+    # mapper.SetZSlice(0)
+    mapper.SetInputConnection(mag.GetOutputPort())
+    # mapper.SetColorlevel(1000)
+    
+    viewer=vtk.vtkImageViewer()
+    viewer.SetInputConnection(reader.GetOutputPort())
+    viewer.SetColorWindow(4)
+    viewer.SetColorLevel(255)
+    # viewer.SetZSlice(0)
+    viewer.Render()
+
+    actor=vtk.vtkActor2D()
+    actor.SetMapper(mapper.GetOutputPort())
+    # actor=vtk.vtkImageActor()
     # actor.SetMapper(mapper)
-    actor.SetInputData(reader.GetOutput())
+    # actor.SetInputData(reader.GetOutput())
     
-    return actor
+    return actor, viewer
 
 
-def render(file1, file2, point):
-    
-    Data1=DicomData(file1)
-    Data2=DicomData(file2)
-    Data1.compute_initial_transform_matrix()
-    Data2.compute_initial_transform_matrix()
+def render(Data1, Data2, point):
 
-    img1=Data1.img.copy()
-    img2=Data2.img.copy()
-
-    # Create a render window
     ren = vtk.vtkRenderer()
     ren.SetBackground(.1, .2, .5)
     ren2dimg1 = vtk.vtkRenderer()
-    # ren2dimg1.SetBackground(.1, .2, .5)
     ren2dimg2= vtk.vtkRenderer()
-    # ren2dimg2.SetBackground(.1, .2, .5)
     renWin = vtk.vtkRenderWindow()
     renWin.AddRenderer(ren)
     renWin.AddRenderer(ren2dimg1)
     renWin.AddRenderer(ren2dimg2)
     renWin.SetSize(1536,1024)
+
+    # Create a render window
     iren = vtk.vtkRenderWindowInteractor()
     iren.SetRenderWindow(renWin)
 
     pts = vtk.vtkPoints()
 
-    [img1_position, img2_position, epi_point1, epi_point2] = epigeometry_points(pts, point, Data1, Data2)   
-
-    cv2.circle(img1,(point[0],point[1]),10,(255,0,0),-1)
-    cv2.line(img2,(int(epi_point1[0]), int(epi_point1[1])),(int(epi_point2[0]), int(epi_point2[1])),(255,0,0),5)
-    cv2.putText(img1,str(int(np.rad2deg(Data1.PA)))+', '+str(int(np.rad2deg(Data1.SA))),(10, 100),1,4,(255,255,255),2,cv2.LINE_AA)
-    cv2.putText(img2,str(int(np.rad2deg(Data2.PA)))+', '+str(int(np.rad2deg(Data2.SA))),(10, 100),1,4,(255,255,255),2,cv2.LINE_AA) 
+    [img1_position, img2_position, epi_point1, epi_point2] = epigeometry_points(pts, point, Data1, Data2)    
 
     colors = vtk.vtkUnsignedCharArray()
     colors.SetNumberOfComponents(3)
@@ -224,27 +233,58 @@ def render(file1, file2, point):
         mapper.SetInput(linesPolyData)
     else:
         mapper.SetInputData(linesPolyData)    
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
+    lineactor = vtk.vtkActor()
+    lineactor.SetMapper(mapper)
 
-    transform1 = vtk.vtkTransform()
-    transform1.Translate(img1_position)
-    transform1.RotateY(np.rad2deg(Data1.PA))
-    transform1.RotateX(-np.rad2deg(Data1.SA))
-    transform1.Scale(img1.shape[0]*Data1.PS[0],img1.shape[1]*Data1.PS[1],1)
+    img1=Data1.img.copy()
+    img2=Data2.img.copy()
 
-    transform2 = vtk.vtkTransform()
-    transform2.Translate(img2_position)
-    transform2.RotateY(np.rad2deg(Data2.PA))
-    transform2.RotateZ(-np.rad2deg(Data2.SA))
-    # transform2.RotateX(-CRAU)
-    transform2.Scale(img2.shape[0]*Data2.PS[0],img2.shape[1]*Data2.PS[1],1)
+    cv2.circle(img1,(point[0],point[1]),10,(255,0,0),-1)
+    cv2.line(img2,(int(epi_point1[0]), int(epi_point1[1])),(int(epi_point2[0]), int(epi_point2[1])),(255,0,0),5)
+    cv2.putText(img1,str(int(np.rad2deg(Data1.PA)))+', '+str(int(np.rad2deg(Data1.SA))),(10, 100),1,4,(255,255,255),2,cv2.LINE_AA)
+    cv2.putText(img2,str(int(np.rad2deg(Data2.PA)))+', '+str(int(np.rad2deg(Data2.SA))),(10, 100),1,4,(255,255,255),2,cv2.LINE_AA)
+    
+    reader1=vtkImageImportFromArray()
+    reader1.SetArray(img1)
+    reader1.Update()
+    fliper1=vtk.vtkImageFlip()
+    fliper1.SetFilteredAxis(1)
+    fliper1.SetInputConnection(reader1.GetOutputPort())
+    fliper1.Update()
+    
+    reader2=vtkImageImportFromArray()
+    reader2.SetArray(img2)
+    reader2.Update()
+    fliper2=vtk.vtkImageFlip()
+    fliper2.SetFilteredAxis(1)
+    fliper2.SetInputConnection(reader2.GetOutputPort())
+    fliper2.Update()
+
+    # transform1 = vtk.vtkTransform()
+    # transform1.Translate(img1_position)
+    # transform1.RotateY(np.rad2deg(Data1.PA))
+    # transform1.RotateX(-np.rad2deg(Data1.SA))
+    # transform1.Scale(img1.shape[0]*Data1.PS[0],img1.shape[1]*Data1.PS[1],1)
+
+    # transform2 = vtk.vtkTransform()
+    # transform2.Translate(img2_position)
+    # transform2.RotateY(np.rad2deg(Data2.PA))
+    # transform2.RotateZ(-np.rad2deg(Data2.SA))
+    # transform2.Scale(img2.shape[0]*Data2.PS[0],img2.shape[1]*Data2.PS[1],1)
 
     planeA_actor = createQuad(img1)
-    planeA_actor.SetUserTransform(transform1)
+    planeA_actor.SetPosition(img1_position)
+    planeA_actor.SetScale(Data1.PS[0],Data1.PS[1],1)
+    planeA_actor.RotateY(np.rad2deg(Data1.PA))
+    planeA_actor.RotateX(-np.rad2deg(Data1.SA))
+    # planeA_actor.SetUserTransform(transform1)
 
     planeB_actor = createQuad(img2)
-    planeB_actor.SetUserTransform(transform2)
+    planeB_actor.SetPosition(img2_position)
+    planeB_actor.SetScale(Data2.PS[0],Data2.PS[1],1)
+    planeB_actor.RotateY(np.rad2deg(Data2.PA))
+    planeB_actor.RotateZ(-np.rad2deg(Data2.SA))
+    # planeB_actor.SetUserTransform(transform2)
 
     axes = vtk.vtkAxesActor()
     transform = vtk.vtkTransform()
@@ -262,19 +302,29 @@ def render(file1, file2, point):
     textActor.SetMapper(textMapper)
     textActor.SetPosition(512,950)
 
-    ren.AddActor(actor)
+    ren.AddActor(lineactor)
     ren.AddActor(planeA_actor)
     ren.AddActor(planeB_actor)
     ren.AddActor(axes)
     ren.AddViewProp(textActor)
     ren.SetViewport([0.0, 0.0, 2/3, 1.0])
 
-    img2dactor1=ImageActor(img1)
-    ren2dimg1.AddActor(img2dactor1)
+    mapper2d1=vtk.vtkImageMapper()
+    mapper2d1.SetInputConnection(fliper1.GetOutputPort())
+    mapper2d1.SetColorWindow(255)
+    mapper2d1.SetColorLevel(127.5)
+    actor2d1=vtk.vtkActor2D()
+    actor2d1.SetMapper(mapper2d1)
+    ren2dimg1.AddActor2D(actor2d1)
     ren2dimg1.SetViewport([2/3,0.5,1.0,1.0])
-    
-    img2dactor2=ImageActor(img2)
-    ren2dimg2.AddActor(img2dactor2)
+
+    mapper2d2=vtk.vtkImageMapper()
+    mapper2d2.SetInputConnection(fliper2.GetOutputPort())
+    mapper2d2.SetColorWindow(255)
+    mapper2d2.SetColorLevel(127.5)
+    actor2d2=vtk.vtkActor2D()
+    actor2d2.SetMapper(mapper2d2)
+    ren2dimg2.AddActor2D(actor2d2)
     ren2dimg2.SetViewport([2/3,0.0,1.0,0.5])
 
     iren.Initialize()

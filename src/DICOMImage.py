@@ -2,7 +2,7 @@ import SimpleITK as sitk
 import numpy as np
 
 def getBestImage(images):
-    return images[40]
+    return images[26]
 
 
 class DicomData():
