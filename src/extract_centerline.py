@@ -1,12 +1,13 @@
 #%%
-from calibration_biplane import DicomData
+# from calibration_biplane import DicomData
 import numpy as np
-from scipy import ndimage as ndi
+# from scipy import ndimage as ndi
 import cv2
-from matplotlib import pyplot as plt 
+# from matplotlib import pyplot as plt 
 from skimage.morphology import medial_axis
 
 def get_center_line(image):
+    # gray=np.expand_dims(image, axis=2)
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     blur = cv2.GaussianBlur(gray, (5,5), 0)
     ret3,th3 = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)

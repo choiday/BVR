@@ -1,8 +1,9 @@
 import vtk
 import numpy as np
 from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray  
-from calibration_biplane import *
+# from calibration_biplane import *
 from epipolar_projection import *
+# from extract_centerline import *
 import cv2 
 
 def create_3dquad_imageactor(image):
@@ -79,30 +80,30 @@ def add_3dline(lines, pts, idx1, idx2, colors, color):
     line.GetPointIds().SetId(1,idx2)
     lines.InsertNextCell(line)
 
-def epigeometry_points(pts, point, Data1, Data2):
-    [gradient3d, point3d] = global_line_from_image_point(point, Data1)
-    [epi_point1, epi_point2] = line_projection(gradient3d, point3d, Data2)
+def epigeometry_points(pts, point, data1, data2):
+    [gradient3d, point3d] = global_line_from_image_point(point, data1)
+    [epipoint1, epipoint2] = line_projection(gradient3d, point3d, data2)
 
-    img1_position=pt3d_from_pt2d([256.0,256.0],Data1)
-    img2_position=pt3d_from_pt2d([256.0,256.0],Data2)
-    source1_position=point3d
-    source2_position=np.matmul(np.linalg.inv(Data2.rot[0:3][:]),np.array([[0.0, 0.0,-Data2.SOD]]).T-Data2.tls[0:3])
-    target_position=pt3d_from_pt2d(point,Data1)
-    epi_position1=pt3d_from_pt2d(epi_point1,Data2)
-    epi_position2=pt3d_from_pt2d(epi_point2,Data2)
+    camPosition1=pt3d_from_pt2d([256.0,256.0],data1)
+    camPosition2=pt3d_from_pt2d([256.0,256.0],data2)
+    source1=point3d
+    source2=np.matmul(np.linalg.inv(data2.rot[0:3][:]),np.array([[0.0, 0.0,-data2.SOD]]).T-data2.tls[0:3])
+    targetPoint3D=pt3d_from_pt2d(point,data1)
+    epipoint3d1=pt3d_from_pt2d(epipoint1,data2)
+    epipoint3d2=pt3d_from_pt2d(epipoint2,data2)
     
-    pts.InsertNextPoint(img1_position)
-    pts.InsertNextPoint(source1_position)   
-    pts.InsertNextPoint(img2_position)
-    pts.InsertNextPoint(source2_position)
-    pts.InsertNextPoint(target_position)
-    pts.InsertNextPoint(epi_position1)
-    pts.InsertNextPoint(epi_position2)
+    pts.InsertNextPoint(camPosition1)
+    pts.InsertNextPoint(source1)   
+    pts.InsertNextPoint(camPosition2)
+    pts.InsertNextPoint(source2)
+    pts.InsertNextPoint(targetPoint3D)
+    pts.InsertNextPoint(epipoint3d1)
+    pts.InsertNextPoint(epipoint3d2)
 
-    return img1_position, img2_position, epi_point1, epi_point2 
+    return camPosition1, camPosition2, epipoint1, epipoint2 
 
 
-def render(Data1, Data2, point):
+def render(data1, data2, point):
 
     ren = vtk.vtkRenderer()
     ren.SetBackground(.1, .2, .5)
@@ -118,7 +119,7 @@ def render(Data1, Data2, point):
 
     pts = vtk.vtkPoints()
 
-    [img1_position, img2_position, epi_point1, epi_point2] = epigeometry_points(pts, point, Data1, Data2)    
+    [camPosition1, camPosition2, epipoint1, epipoint2] = epigeometry_points(pts, point, data1, data2)    
 
     colors = vtk.vtkUnsignedCharArray()
     colors.SetNumberOfComponents(3)
@@ -146,13 +147,15 @@ def render(Data1, Data2, point):
     lineactor = vtk.vtkActor()
     lineactor.SetMapper(mapper)
 
-    img1=Data1.img.copy()
-    img2=Data2.img.copy()
+    img1=data1.images[26].copy()
+    img2=data2.images[26].copy()
+    # img1=get_center_line(data1.images[26])
+    # img2=get_center_line(data2.images[26])
 
     cv2.circle(img1,(point[0],point[1]),10,(255,0,0),-1)
-    cv2.line(img2,(int(epi_point1[0]), int(epi_point1[1])),(int(epi_point2[0]), int(epi_point2[1])),(255,0,0),5)
-    cv2.putText(img1,str(int(np.rad2deg(Data1.PA)))+', '+str(int(np.rad2deg(Data1.SA))),(10, 100),1,4,(255,255,255),2,cv2.LINE_AA)
-    cv2.putText(img2,str(int(np.rad2deg(Data2.PA)))+', '+str(int(np.rad2deg(Data2.SA))),(10, 100),1,4,(255,255,255),2,cv2.LINE_AA)
+    cv2.line(img2,(int(epipoint1[0]), int(epipoint1[1])),(int(epipoint2[0]), int(epipoint2[1])),(255,0,0),5)
+    cv2.putText(img1,str(int(np.rad2deg(data1.PA)))+', '+str(int(np.rad2deg(data1.SA))),(10, 100),1,4,(255,255,255),2,cv2.LINE_AA)
+    cv2.putText(img2,str(int(np.rad2deg(data2.PA)))+', '+str(int(np.rad2deg(data2.SA))),(10, 100),1,4,(255,255,255),2,cv2.LINE_AA)
     
     reader1=vtkImageImportFromArray()
     reader1.SetArray(img1)
@@ -170,18 +173,18 @@ def render(Data1, Data2, point):
     fliper2.SetInputConnection(reader2.GetOutputPort())
     fliper2.Update()
 
-    planeA_actor = create_3dquad_imageactor(img1)
-    planeA_actor.SetPosition(img1_position)
-    planeA_actor.SetScale(Data1.PS[0],Data1.PS[1],1)
-    planeA_actor.RotateY(np.rad2deg(Data1.PA))
-    planeA_actor.RotateX(-np.rad2deg(Data1.SA))
+    planeAactor = create_3dquad_imageactor(img1)
+    planeAactor.SetPosition(camPosition1)
+    planeAactor.SetScale(data1.PS[0],data1.PS[1],1)
+    planeAactor.RotateY(np.rad2deg(data1.PA))
+    planeAactor.RotateX(-np.rad2deg(data1.SA))
     # planeA_actor.SetUserTransform(transform1)
 
-    planeB_actor = create_3dquad_imageactor(img2)
-    planeB_actor.SetPosition(img2_position)
-    planeB_actor.SetScale(Data2.PS[0],Data2.PS[1],1)
-    planeB_actor.RotateY(np.rad2deg(Data2.PA))
-    planeB_actor.RotateZ(-np.rad2deg(Data2.SA))
+    planeBactor = create_3dquad_imageactor(img2)
+    planeBactor.SetPosition(camPosition2)
+    planeBactor.SetScale(data2.PS[0],data2.PS[1],1)
+    planeBactor.RotateY(np.rad2deg(data2.PA))
+    planeBactor.RotateZ(-np.rad2deg(data2.SA))
     # planeB_actor.SetUserTransform(transform2)
 
     axes = vtk.vtkAxesActor()
@@ -201,8 +204,8 @@ def render(Data1, Data2, point):
     textActor.SetPosition(512,950)
 
     ren.AddActor(lineactor)
-    ren.AddActor(planeA_actor)
-    ren.AddActor(planeB_actor)
+    ren.AddActor(planeAactor)
+    ren.AddActor(planeBactor)
     ren.AddActor(axes)
     ren.AddViewProp(textActor)
     ren.SetViewport([0.0, 0.0, 2/3, 1.0])
