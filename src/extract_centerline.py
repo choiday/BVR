@@ -8,9 +8,8 @@ from skimage.morphology import medial_axis
 
 def get_center_line(image):
     # gray=np.expand_dims(image, axis=2)
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    blur = cv2.GaussianBlur(gray, (5,5), 0)
-    ret3,th3 = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    blur = cv2.GaussianBlur(image, (5,5), 0)
+    ret3,th3 = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     kernel = np.ones((5,5), np.uint8)
     morph = cv2.dilate(th3, kernel, iterations = 1)
     kernel = np.ones((2,2), np.uint8)

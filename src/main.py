@@ -12,14 +12,16 @@ metadata2, images2 = parsing_dicom('temp2')
 imageSelector = ImageSelector(images1, images2)
 [selectedImage1, selectedImage2] = imageSelector.select()
 
+plt.figure(figsize=(18,9))
 plt.imshow(selectedImage1, cmap = 'gray')
 plt.imshow(selectedImage2, cmap = 'gray')
 
+#%%
 skeltonizedImage1 = get_center_line(selectedImage1)
 skeltonizedImage2 = get_center_line(selectedImage2)
 
-# plt.imshow(skeltonizedImage1, cmap = 'gray')
-# plt.imshow(skeltonizedImage2, cmap = 'gray')
+plt.imshow(skeltonizedImage1, cmap = 'gray')
+plt.imshow(skeltonizedImage2, cmap = 'gray')
 
 # pointMatcher = PointMatcher(skeltonizedImage1, skeltonizedImage2, metadata1, metadata2)
 # matchingPoints = pointMatcher.match()
