@@ -7,7 +7,6 @@ import cv2
 from skimage.morphology import medial_axis
 
 def get_center_line(image):
-    # gray=np.expand_dims(image, axis=2)
     blur = cv2.GaussianBlur(image, (5,5), 0)
     ret3,th3 = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     kernel = np.ones((5,5), np.uint8)

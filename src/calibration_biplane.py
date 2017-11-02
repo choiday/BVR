@@ -6,7 +6,7 @@ import os
 #     return images[26]    
 reader=sitk.ImageFileReader()
 
-def parsing_dicom(filepath):
+def parse_dicom(filepath):
     if filepath is 'temp1':
         filepath = os.getenv('HOME')+'/workspace/BVR/resource/Data/P2PGS/DCM/I0000003'
     elif filepath is 'temp2':
@@ -16,6 +16,7 @@ def parsing_dicom(filepath):
     metadata={}
     images=[]
 
+    metadata['path'] = filepath
     metadata['SID'] = float(data.GetMetaData('0018|1110'))
     metadata['SOD'] = float(data.GetMetaData('0018|1111'))
     metadata['PA'] = np.deg2rad(float(data.GetMetaData('0018|1510')))
