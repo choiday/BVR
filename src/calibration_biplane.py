@@ -8,9 +8,9 @@ reader=sitk.ImageFileReader()
 
 def parse_dicom(filepath):
     if filepath is 'temp1':
-        filepath = os.getenv('HOME')+'/workspace/BVR/resource/Data/P2PGS/DCM/I0000003'
+        filepath = os.getenv('HOME')+'/workspace/BVR/resource/Data/P2PGS/DCM/I0000011'
     elif filepath is 'temp2':
-        filepath = os.getenv('HOME')+'/workspace/BVR/resource/Data/P2PGS/DCM/I0000004'
+        filepath = os.getenv('HOME')+'/workspace/BVR/resource/Data/P2PGS/DCM/I0000012'
     reader.SetFileName(filepath)
     data=reader.Execute()
     metadata={}

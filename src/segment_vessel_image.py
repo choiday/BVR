@@ -4,12 +4,14 @@ import sys, os
 import numpy as np
 
 class ImageSelector():
+    
     def __init__(self, images1, images2, filepath1, filepath2):
         self.images1 = images1
         self.images2 = images2
         self.filepath1 = filepath1
         self.filepath2 = filepath2
         self.modelpath = './../whole_model.h5'
+        self.selected=0
         
     def select(self):
         if os.path.exists(self.filepath1[0:self.filepath1.rfind('/')+1] +'predict'+ self.filepath1[-3:] + '.npy') is False:
@@ -27,8 +29,10 @@ class ImageSelector():
             self.predictedImages1 = load_prediction(self.filepath1)
             self.predictedImages2 = load_prediction(self.filepath2)
 
-        selected=26
-        return [self.predictedImages1[selected,:,:,0], self.predictedImages2[selected,:,:,0]]
+        self.sums=np.sum(np.sum(np.floor(2*self.predictedImages1),axis=1),axis=1)
+        self.selected=np.argmax(self.sums)
+        print(self.selected,'th image is selected')
+        return [self.predictedImages1[self.selected,:,:,0], self.predictedImages2[self.selected,:,:,0]]
 
 def predict_image(data1, data2, modelPath):
     from keras.models import load_model
@@ -44,7 +48,7 @@ def predict_image(data1, data2, modelPath):
     return [predictImgs1, predictImgs2]
 
 def save_prediction(predictImgs, filepath):
-    np.save(filepath[0:filepath.rfind('/')+1] +'predict'+ filepath[-3:] + '.npy', predicted_images)
+    np.save(filepath[0:filepath.rfind('/')+1] +'predict'+ filepath[-3:] + '.npy', predictImgs)
     print('predicted images are saved')
 
 def load_prediction(filepath):
